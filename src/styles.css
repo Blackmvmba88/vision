@@ -247,8 +247,21 @@ button:disabled {
   gap: 12px;
 }
 
+.object-card-column,
 .memory-card-column {
   flex-direction: column;
+}
+
+.object-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.object-card small {
+  color: #94a3b8;
+  line-height: 1.35;
 }
 
 .memory-heading {
