@@ -1,1 +1,59 @@
-{"scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview","test":"vitest","test:run":"vitest run","lint":"eslint ."},"dependencies":{"@vitejs/plugin-react-swc":"latest","vite":"latest","typescript":"latest","react":"latest","react-dom":"latest","lucide-react":"latest"},"devDependencies":{"vitest":"latest","jsdom":"latest","@testing-library/react":"latest","@testing-library/jest-dom":"latest","@testing-library/user-event":"latest","eslint":"latest","@eslint/js":"latest","typescript-eslint":"latest","tailwindcss":"latest","postcss":"latest","autoprefixer":"latest"}}
+{
+  "name": "blackmamba-vision",
+  "version": "0.1.0-alpha.0",
+  "description": "Mobile-first visual intelligence engine for real-time object recognition, inventory memory, and Observer First computer vision.",
+  "private": true,
+  "type": "module",
+  "author": "BlackMamba",
+  "license": "MIT",
+  "homepage": "https://blackmvmba88.github.io/vision",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Blackmvmba88/vision.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Blackmvmba88/vision/issues"
+  },
+  "keywords": [
+    "computer-vision",
+    "object-detection",
+    "mobile-ai",
+    "observer-first",
+    "inventory",
+    "react",
+    "vite",
+    "typescript",
+    "tensorflowjs",
+    "yolo",
+    "blackmamba"
+  ],
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@vitejs/plugin-react-swc": "latest",
+    "vite": "latest",
+    "typescript": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "lucide-react": "latest"
+  },
+  "devDependencies": {
+    "vitest": "latest",
+    "jsdom": "latest",
+    "@testing-library/react": "latest",
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/user-event": "latest",
+    "eslint": "latest",
+    "@eslint/js": "latest",
+    "typescript-eslint": "latest",
+    "tailwindcss": "latest",
+    "postcss": "latest",
+    "autoprefixer": "latest"
+  }
+}
