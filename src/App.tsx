@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree, BarChart3 } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
+import { getObjectAlias } from "./features/labels/objectAliases";
 import { createObserverEvents } from "./features/memory/createObserverEvents";
 import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
 import { summarizeObserverEvents } from "./features/memory/summarizeObserverEvents";
@@ -10,8 +11,8 @@ import type { ManualAnnotation } from "./features/memory/types";
 const objects = [
   { name: "keyboard", score: 0.98 },
   { name: "mouse", score: 0.96 },
-  { name: "monitor", score: 0.94 },
-  { name: "can", score: 0.89 },
+  { name: "cell phone", score: 0.94 },
+  { name: "bottle", score: 0.89 },
 ];
 
 type CameraStatus = "initializing" | "active" | "denied" | "unsupported" | "error";
@@ -32,8 +33,26 @@ export default function App() {
 
   const displayedObjects =
     predictions.length > 0
-      ? predictions.map((prediction) => ({ name: prediction.className, score: prediction.score }))
-      : objects;
+      ? predictions.map((prediction) => {
+          const alias = getObjectAlias(prediction.className);
+          return {
+            name: alias.canonicalName,
+            score: prediction.score,
+            displayName: alias.displayName,
+            spanishName: alias.spanishName,
+            systemRole: alias.systemRole,
+          };
+        })
+      : objects.map((object) => {
+          const alias = getObjectAlias(object.name);
+          return {
+            ...object,
+            name: alias.canonicalName,
+            displayName: alias.displayName,
+            spanishName: alias.spanishName,
+            systemRole: alias.systemRole,
+          };
+        });
   const detectorStateLabel =
     detectorStatus === "loading"
       ? "Loading detector..."
@@ -199,20 +218,23 @@ export default function App() {
             {cameraStatus === "active" ? "Live camera" : "Camera preview"}
           </div>
 
-          {predictions.map((prediction, index) => (
-            <div
-              key={`${prediction.className}-${index}`}
-              className="detection-box"
-              style={{
-                left: `${prediction.bbox[0]}px`,
-                top: `${prediction.bbox[1]}px`,
-                width: `${prediction.bbox[2]}px`,
-                height: `${prediction.bbox[3]}px`,
-              }}
-            >
-              <span>{prediction.className} {Math.round(prediction.score * 100)}%</span>
-            </div>
-          ))}
+          {predictions.map((prediction, index) => {
+            const alias = getObjectAlias(prediction.className);
+            return (
+              <div
+                key={`${prediction.className}-${index}`}
+                className="detection-box"
+                style={{
+                  left: `${prediction.bbox[0]}px`,
+                  top: `${prediction.bbox[1]}px`,
+                  width: `${prediction.bbox[2]}px`,
+                  height: `${prediction.bbox[3]}px`,
+                }}
+              >
+                <span>{alias.displayName} · {alias.spanishName} {Math.round(prediction.score * 100)}%</span>
+              </div>
+            );
+          })}
 
           {annotations.map((annotation) => (
             <div
@@ -270,9 +292,12 @@ export default function App() {
 
         <div className="object-list">
           {displayedObjects.map((object) => (
-            <article className="object-card" key={`${object.name}-${object.score}`}>
-              <span>{object.name}</span>
-              <strong>{Math.round(object.score * 100)}%</strong>
+            <article className="object-card object-card-column" key={`${object.name}-${object.score}`}>
+              <div className="object-title-row">
+                <span>{object.displayName ?? object.name}</span>
+                <strong>{Math.round(object.score * 100)}%</strong>
+              </div>
+              <small>{object.spanishName ?? object.name} · {object.systemRole ?? "observed object"}</small>
             </article>
           ))}
         </div>
