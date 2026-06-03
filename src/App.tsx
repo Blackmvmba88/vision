@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw } from "lucide-react";
+import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2 } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
+import { useSceneMemory } from "./features/memory/useSceneMemory";
+import type { ManualAnnotation } from "./features/memory/types";
 
 const objects = [
   { name: "keyboard", score: 0.98 },
@@ -13,14 +15,15 @@ type CameraStatus = "initializing" | "active" | "denied" | "unsupported" | "erro
 
 export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [annotations, setAnnotations] = useState<
-    Array<{ id: string; x: number; y: number; width: number; height: number }>
-  >([]);
+  const [memoryMessage, setMemoryMessage] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<ManualAnnotation[]>([]);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
+  const { snapshots, createSnapshot, clearSnapshots, exportSnapshots, importSnapshots } = useSceneMemory();
 
   const displayedObjects =
     predictions.length > 0
@@ -115,6 +118,29 @@ export default function App() {
     setDragRect(null);
   };
 
+  const handleSaveSnapshot = () => {
+    const snapshot = createSnapshot(displayedObjects, annotations);
+    setMemoryMessage(`Saved ${snapshot.objects.length} objects at ${new Date(snapshot.timestamp).toLocaleTimeString()}`);
+  };
+
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await importSnapshots(file);
+      setMemoryMessage(`Imported memory from ${file.name}`);
+    } catch (error) {
+      setMemoryMessage(error instanceof Error ? error.message : "Unable to import scene memory.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -124,7 +150,7 @@ export default function App() {
           </div>
           <div>
             <p className="eyebrow">BlackMamba Vision</p>
-            <h1>Observe. Recognize. Remember.</h1>
+            <h1>Observe. Recognize. Remember. Persist.</h1>
           </div>
         </div>
 
@@ -249,11 +275,32 @@ export default function App() {
           </div>
         )}
 
-        <div className="memory-card">
-          <History size={20} />
-          <div>
-            <h3>Observer Memory</h3>
-            <p>Inventory tracking comes next: detect changes, count objects, remember scenes.</p>
+        <div className="memory-card memory-card-column">
+          <div className="memory-heading">
+            <History size={20} />
+            <div>
+              <h3>Observer Memory</h3>
+              <p>{snapshots.length} snapshot{snapshots.length === 1 ? "" : "s"} stored in this browser.</p>
+            </div>
+          </div>
+
+          <div className="memory-actions">
+            <button onClick={handleSaveSnapshot}><Save size={16} /> Save scene</button>
+            <button onClick={exportSnapshots} disabled={snapshots.length === 0}><Download size={16} /> Export</button>
+            <button onClick={handleImportClick}><Upload size={16} /> Import</button>
+            <button onClick={clearSnapshots} disabled={snapshots.length === 0}><Trash2 size={16} /> Clear</button>
+            <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} hidden />
+          </div>
+
+          {memoryMessage && <small className="memory-message">{memoryMessage}</small>}
+
+          <div className="snapshot-list">
+            {snapshots.slice(0, 5).map((snapshot) => (
+              <article className="snapshot-card" key={snapshot.id}>
+                <span>{new Date(snapshot.timestamp).toLocaleString()}</span>
+                <strong>{snapshot.objects.length} objects · {snapshot.annotations.length} marks</strong>
+              </article>
+            ))}
           </div>
         </div>
       </aside>
