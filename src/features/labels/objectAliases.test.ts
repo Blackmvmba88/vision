@@ -17,6 +17,24 @@ describe("objectAliases", () => {
     expect(formatObjectLabel("cell phone")).toBe("Mobile Node · Celular nodo");
   });
 
+  it("allows custom alias overrides", () => {
+    const alias = getObjectAlias("cell phone", {
+      "cell phone": {
+        displayName: "Mi cel nodo",
+        spanishName: "Celular principal",
+        systemRole: "persistent presence control surface",
+      },
+    });
+
+    expect(alias).toEqual({
+      canonicalName: "cell phone",
+      displayName: "Mi cel nodo",
+      spanishName: "Celular principal",
+      systemRole: "persistent presence control surface",
+    });
+    expect(formatObjectLabel("cell phone", { "cell phone": alias })).toBe("Mi cel nodo · Celular principal");
+  });
+
   it("falls back to the original class when no alias exists", () => {
     const alias = getObjectAlias("remote");
 
