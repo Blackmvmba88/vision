@@ -22,6 +22,7 @@ type CameraStatus = "initializing" | "active" | "denied" | "unsupported" | "erro
 export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const aliasImportInputRef = useRef<HTMLInputElement | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [memoryMessage, setMemoryMessage] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export default function App() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
-  const { customAliases, setCustomAlias, removeCustomAlias, clearCustomAliases } = useCustomAliases();
+  const { customAliases, setCustomAlias, removeCustomAlias, clearCustomAliases, exportCustomAliases, importCustomAliases } = useCustomAliases();
   const { snapshots, events, createSnapshot, addEvents, clearMemory, exportMemory, importMemory } = useSceneMemory();
   const observerSummary = summarizeObserverEvents(events);
 
@@ -210,6 +211,24 @@ export default function App() {
     setAliasMessage("All custom aliases cleared.");
   };
 
+  const handleAliasImportClick = () => {
+    aliasImportInputRef.current?.click();
+  };
+
+  const handleAliasImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await importCustomAliases(file);
+      setAliasMessage(`Imported aliases from ${file.name}.`);
+    } catch (error) {
+      setAliasMessage(error instanceof Error ? error.message : "Unable to import custom aliases.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -356,7 +375,10 @@ export default function App() {
           <div className="memory-actions">
             <button onClick={handleSaveAlias}><Save size={16} /> Save alias</button>
             <button onClick={() => handleRemoveAlias()}><X size={16} /> Remove</button>
+            <button onClick={exportCustomAliases} disabled={customAliasEntries.length === 0}><Download size={16} /> Export</button>
+            <button onClick={handleAliasImportClick}><Upload size={16} /> Import</button>
             <button onClick={handleClearAliases} disabled={customAliasEntries.length === 0}><Trash2 size={16} /> Clear aliases</button>
+            <input ref={aliasImportInputRef} type="file" accept="application/json" onChange={handleAliasImportFile} hidden />
           </div>
           {aliasMessage && <small className="memory-message">{aliasMessage}</small>}
           {customAliasEntries.length > 0 && (
