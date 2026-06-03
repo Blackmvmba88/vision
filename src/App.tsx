@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw } from "lucide-react";
+import { useObjectDetector } from "./features/detector/useObjectDetector";
 
 const objects = [
-  { name: "keyboard", confidence: 0.98 },
-  { name: "mouse", confidence: 0.96 },
-  { name: "monitor", confidence: 0.94 },
-  { name: "can", confidence: 0.89 },
+  { name: "keyboard", score: 0.98 },
+  { name: "mouse", score: 0.96 },
+  { name: "monitor", score: 0.94 },
+  { name: "can", score: 0.89 },
 ];
 
 type CameraStatus = "initializing" | "active" | "denied" | "unsupported" | "error";
@@ -14,6 +15,17 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
+  const displayedObjects =
+    predictions.length > 0
+      ? predictions.map((prediction) => ({ name: prediction.className, score: prediction.score }))
+      : objects;
+  const detectorStateLabel =
+    detectorStatus === "loading"
+      ? "Loading detector..."
+      : detectorStatus === "ready"
+      ? "Detecting objects..."
+      : "Detector failed to load";
 
   const requestCameraAccess = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -82,12 +94,28 @@ export default function App() {
             {cameraStatus === "active" ? "Live camera" : "Camera preview"}
           </div>
 
+          {predictions.map((prediction, index) => (
+            <div
+              key={`${prediction.className}-${index}`}
+              className="detection-box"
+              style={{
+                left: `${prediction.bbox[0]}px`,
+                top: `${prediction.bbox[1]}px`,
+                width: `${prediction.bbox[2]}px`,
+                height: `${prediction.bbox[3]}px`,
+              }}
+            >
+              <span>{prediction.className} {Math.round(prediction.score * 100)}%</span>
+            </div>
+          ))}
+
           <div className="camera-status">
             {cameraStatus === "active" && "Live camera active"}
             {cameraStatus === "initializing" && "Initializing camera..."}
             {cameraStatus === "denied" && <span><AlertTriangle size={16} /> Permission denied</span>}
             {cameraStatus === "unsupported" && <span><AlertTriangle size={16} /> Unsupported</span>}
             {cameraStatus === "error" && <span><AlertTriangle size={16} /> Camera error</span>}
+            {cameraStatus === "active" && detectorStatus && <span>{detectorStateLabel}</span>}
           </div>
 
           {(cameraStatus === "denied" || cameraStatus === "error") && (
@@ -96,9 +124,6 @@ export default function App() {
             </button>
           )}
 
-          <div className="box box-keyboard">keyboard 98%</div>
-          <div className="box box-mouse">mouse 96%</div>
-          <div className="box box-monitor">monitor 94%</div>
           <ScanLine className="scan-line" size={42} />
         </div>
       </section>
@@ -108,15 +133,16 @@ export default function App() {
           <Boxes size={22} />
           <div>
             <h2>Detected Objects</h2>
-            <p>{objects.length} objects in current frame</p>
+            <p>{displayedObjects.length} objects in current frame</p>
+            {detectorError && <small className="error-label">{detectorError}</small>}
           </div>
         </div>
 
         <div className="object-list">
-          {objects.map((object) => (
-            <article className="object-card" key={object.name}>
+          {displayedObjects.map((object) => (
+            <article className="object-card" key={`${object.name}-${object.score}`}>
               <span>{object.name}</span>
-              <strong>{Math.round(object.confidence * 100)}%</strong>
+              <strong>{Math.round(object.score * 100)}%</strong>
             </article>
           ))}
         </div>
