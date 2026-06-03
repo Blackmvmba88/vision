@@ -1,15 +1,29 @@
 import { useEffect, useState } from "react";
-import type { ManualAnnotation, SceneObject, SceneSnapshot } from "./types";
+import type { ManualAnnotation, ObserverEvent, SceneObject, SceneSnapshot } from "./types";
 
-const STORAGE_KEY = "blackmamba-vision-scene-memory";
+const SNAPSHOTS_STORAGE_KEY = "blackmamba-vision-scene-memory";
+const EVENTS_STORAGE_KEY = "blackmamba-vision-observer-events";
 
 function readStoredSnapshots(): SceneSnapshot[] {
   if (typeof window === "undefined") return [];
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(SNAPSHOTS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as SceneSnapshot[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readStoredEvents(): ObserverEvent[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(EVENTS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ObserverEvent[];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -30,10 +44,15 @@ function downloadTextFile(filename: string, content: string) {
 
 export function useSceneMemory() {
   const [snapshots, setSnapshots] = useState<SceneSnapshot[]>(() => readStoredSnapshots());
+  const [events, setEvents] = useState<ObserverEvent[]>(() => readStoredEvents());
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
+    window.localStorage.setItem(SNAPSHOTS_STORAGE_KEY, JSON.stringify(snapshots));
   }, [snapshots]);
+
+  useEffect(() => {
+    window.localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+  }, [events]);
 
   const createSnapshot = (objects: SceneObject[], annotations: ManualAnnotation[]) => {
     const now = new Date();
@@ -49,31 +68,50 @@ export function useSceneMemory() {
     return snapshot;
   };
 
-  const clearSnapshots = () => {
+  const addEvents = (nextEvents: ObserverEvent[]) => {
+    setEvents((previous) => [...nextEvents, ...previous].slice(0, 100));
+  };
+
+  const clearMemory = () => {
     setSnapshots([]);
+    setEvents([]);
   };
 
-  const exportSnapshots = () => {
+  const exportMemory = () => {
     const stamp = new Date().toISOString().replaceAll(":", "-");
-    downloadTextFile(`vision-scene-memory-${stamp}.json`, JSON.stringify(snapshots, null, 2));
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      snapshots,
+      events,
+    };
+    downloadTextFile(`vision-observer-memory-${stamp}.json`, JSON.stringify(payload, null, 2));
   };
 
-  const importSnapshots = async (file: File) => {
+  const importMemory = async (file: File) => {
     const text = await file.text();
-    const parsed = JSON.parse(text) as SceneSnapshot[];
+    const parsed = JSON.parse(text) as { snapshots?: SceneSnapshot[]; events?: ObserverEvent[] } | SceneSnapshot[];
 
-    if (!Array.isArray(parsed)) {
-      throw new Error("Scene memory import must be a JSON array.");
+    if (Array.isArray(parsed)) {
+      setSnapshots(parsed.slice(0, 25));
+      setEvents([]);
+      return;
     }
 
-    setSnapshots(parsed.slice(0, 25));
+    if (!Array.isArray(parsed.snapshots)) {
+      throw new Error("Observer memory import must include a snapshots array.");
+    }
+
+    setSnapshots(parsed.snapshots.slice(0, 25));
+    setEvents(Array.isArray(parsed.events) ? parsed.events.slice(0, 100) : []);
   };
 
   return {
     snapshots,
+    events,
     createSnapshot,
-    clearSnapshots,
-    exportSnapshots,
-    importSnapshots,
+    addEvents,
+    clearMemory,
+    exportMemory,
+    importMemory,
   };
 }
