@@ -15,7 +15,13 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<
+    Array<{ id: string; x: number; y: number; width: number; height: number }>
+  >([]);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
+
   const displayedObjects =
     predictions.length > 0
       ? predictions.map((prediction) => ({ name: prediction.className, score: prediction.score }))
@@ -64,6 +70,51 @@ export default function App() {
     };
   }, []);
 
+  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (cameraStatus !== "active") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - bounds.left;
+    const y = event.clientY - bounds.top;
+    setDragStart({ x, y });
+    setDragRect({ x, y, width: 0, height: 0 });
+  };
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragStart || cameraStatus !== "active") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const currentX = event.clientX - bounds.left;
+    const currentY = event.clientY - bounds.top;
+    const width = currentX - dragStart.x;
+    const height = currentY - dragStart.y;
+    setDragRect({
+      x: width < 0 ? currentX : dragStart.x,
+      y: height < 0 ? currentY : dragStart.y,
+      width: Math.abs(width),
+      height: Math.abs(height),
+    });
+  };
+
+  const finalizeAnnotation = () => {
+    if (!dragRect) {
+      setDragStart(null);
+      return;
+    }
+    if (dragRect.width > 10 && dragRect.height > 10) {
+      setAnnotations((previous) => [
+        ...previous,
+        {
+          id: `manual-${Date.now()}`,
+          x: dragRect.x,
+          y: dragRect.y,
+          width: dragRect.width,
+          height: dragRect.height,
+        },
+      ]);
+    }
+    setDragStart(null);
+    setDragRect(null);
+  };
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -77,7 +128,13 @@ export default function App() {
           </div>
         </div>
 
-        <div className="camera-frame">
+        <div
+          className="camera-frame"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={finalizeAnnotation}
+          onMouseLeave={finalizeAnnotation}
+        >
           <video ref={videoRef} className="camera-video" muted playsInline />
           {cameraStatus !== "active" && (
             <div className="camera-fallback">
@@ -88,6 +145,11 @@ export default function App() {
               </div>
             </div>
           )}
+          <div className="camera-overlay">
+            {cameraStatus === "active" && (
+              <p className="mouse-hint">Click and drag to mark an object region.</p>
+            )}
+          </div>
           <div className="scan-grid" />
           <div className="camera-label">
             <Camera size={18} />
@@ -108,6 +170,31 @@ export default function App() {
               <span>{prediction.className} {Math.round(prediction.score * 100)}%</span>
             </div>
           ))}
+
+          {annotations.map((annotation) => (
+            <div
+              key={annotation.id}
+              className="annotation-box"
+              style={{
+                left: `${annotation.x}px`,
+                top: `${annotation.y}px`,
+                width: `${annotation.width}px`,
+                height: `${annotation.height}px`,
+              }}
+            />
+          ))}
+
+          {dragRect && (
+            <div
+              className="annotation-box annotation-preview"
+              style={{
+                left: `${dragRect.x}px`,
+                top: `${dragRect.y}px`,
+                width: `${dragRect.width}px`,
+                height: `${dragRect.height}px`,
+              }}
+            />
+          )}
 
           <div className="camera-status">
             {cameraStatus === "active" && "Live camera active"}
@@ -146,6 +233,21 @@ export default function App() {
             </article>
           ))}
         </div>
+
+        {annotations.length > 0 && (
+          <div className="manual-panel">
+            <h3>Manual marks</h3>
+            <p>{annotations.length} region{annotations.length > 1 ? "s" : ""} marked with mouse.</p>
+            <div className="manual-list">
+              {annotations.map((annotation) => (
+                <article className="annotation-item" key={annotation.id}>
+                  <span>{annotation.id}</span>
+                  <strong>{Math.round(annotation.width)}×{Math.round(annotation.height)}</strong>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="memory-card">
           <History size={20} />
