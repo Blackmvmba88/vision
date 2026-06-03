@@ -1,6 +1,9 @@
 export type SceneObject = {
   name: string;
   score: number;
+  displayName?: string;
+  spanishName?: string;
+  systemRole?: string;
 };
 
 export type ManualAnnotation = {
