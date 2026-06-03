@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2 } from "lucide-react";
+import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
+import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
 import { useSceneMemory } from "./features/memory/useSceneMemory";
 import type { ManualAnnotation } from "./features/memory/types";
 
@@ -19,6 +20,7 @@ export default function App() {
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [memoryMessage, setMemoryMessage] = useState<string | null>(null);
+  const [lastDiff, setLastDiff] = useState<SceneSnapshotDiff | null>(null);
   const [annotations, setAnnotations] = useState<ManualAnnotation[]>([]);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -119,7 +121,10 @@ export default function App() {
   };
 
   const handleSaveSnapshot = () => {
+    const previousSnapshot = snapshots[0] ?? null;
     const snapshot = createSnapshot(displayedObjects, annotations);
+    const diff = diffSceneSnapshots(previousSnapshot, snapshot);
+    setLastDiff(diff);
     setMemoryMessage(`Saved ${snapshot.objects.length} objects at ${new Date(snapshot.timestamp).toLocaleTimeString()}`);
   };
 
@@ -133,12 +138,19 @@ export default function App() {
 
     try {
       await importSnapshots(file);
+      setLastDiff(null);
       setMemoryMessage(`Imported memory from ${file.name}`);
     } catch (error) {
       setMemoryMessage(error instanceof Error ? error.message : "Unable to import scene memory.");
     } finally {
       event.target.value = "";
     }
+  };
+
+  const handleClearSnapshots = () => {
+    clearSnapshots();
+    setLastDiff(null);
+    setMemoryMessage("Observer memory cleared.");
   };
 
   return (
@@ -288,11 +300,37 @@ export default function App() {
             <button onClick={handleSaveSnapshot}><Save size={16} /> Save scene</button>
             <button onClick={exportSnapshots} disabled={snapshots.length === 0}><Download size={16} /> Export</button>
             <button onClick={handleImportClick}><Upload size={16} /> Import</button>
-            <button onClick={clearSnapshots} disabled={snapshots.length === 0}><Trash2 size={16} /> Clear</button>
+            <button onClick={handleClearSnapshots} disabled={snapshots.length === 0}><Trash2 size={16} /> Clear</button>
             <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} hidden />
           </div>
 
           {memoryMessage && <small className="memory-message">{memoryMessage}</small>}
+
+          {lastDiff && (
+            <div className="change-card">
+              <div className="memory-heading">
+                <Activity size={18} />
+                <div>
+                  <h3>Change Detection</h3>
+                  <p>{lastDiff.previousCount} objects before → {lastDiff.currentCount} objects now</p>
+                </div>
+              </div>
+              <div className="change-grid">
+                <div>
+                  <span>Appeared</span>
+                  <strong>{lastDiff.appeared.length > 0 ? lastDiff.appeared.join(", ") : "none"}</strong>
+                </div>
+                <div>
+                  <span>Disappeared</span>
+                  <strong>{lastDiff.disappeared.length > 0 ? lastDiff.disappeared.join(", ") : "none"}</strong>
+                </div>
+                <div>
+                  <span>Unchanged</span>
+                  <strong>{lastDiff.unchanged.length > 0 ? lastDiff.unchanged.join(", ") : "none"}</strong>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="snapshot-list">
             {snapshots.slice(0, 5).map((snapshot) => (
