@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree, BarChart3 } from "lucide-react";
+import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree, BarChart3, Pencil, X } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
 import { getObjectAlias } from "./features/labels/objectAliases";
+import { useCustomAliases } from "./features/labels/useCustomAliases";
 import { createObserverEvents } from "./features/memory/createObserverEvents";
 import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
 import { summarizeObserverEvents } from "./features/memory/summarizeObserverEvents";
@@ -23,18 +24,23 @@ export default function App() {
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [memoryMessage, setMemoryMessage] = useState<string | null>(null);
+  const [aliasMessage, setAliasMessage] = useState<string | null>(null);
+  const [aliasDisplayName, setAliasDisplayName] = useState("Mi cel nodo");
+  const [aliasSpanishName, setAliasSpanishName] = useState("Celular nodo principal");
+  const [aliasSystemRole, setAliasSystemRole] = useState("persistent presence control surface");
   const [lastDiff, setLastDiff] = useState<SceneSnapshotDiff | null>(null);
   const [annotations, setAnnotations] = useState<ManualAnnotation[]>([]);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
+  const { customAliases, setCustomAlias, removeCustomAlias, clearCustomAliases } = useCustomAliases();
   const { snapshots, events, createSnapshot, addEvents, clearMemory, exportMemory, importMemory } = useSceneMemory();
   const observerSummary = summarizeObserverEvents(events);
 
   const displayedObjects =
     predictions.length > 0
       ? predictions.map((prediction) => {
-          const alias = getObjectAlias(prediction.className);
+          const alias = getObjectAlias(prediction.className, customAliases);
           return {
             name: alias.canonicalName,
             score: prediction.score,
@@ -44,7 +50,7 @@ export default function App() {
           };
         })
       : objects.map((object) => {
-          const alias = getObjectAlias(object.name);
+          const alias = getObjectAlias(object.name, customAliases);
           return {
             ...object,
             name: alias.canonicalName,
@@ -53,6 +59,7 @@ export default function App() {
             systemRole: alias.systemRole,
           };
         });
+  const selectedAliasTarget = displayedObjects[0]?.name ?? "cell phone";
   const detectorStateLabel =
     detectorStatus === "loading"
       ? "Loading detector..."
@@ -177,6 +184,21 @@ export default function App() {
     setMemoryMessage("Observer memory cleared.");
   };
 
+  const handleSaveAlias = () => {
+    setCustomAlias(selectedAliasTarget, aliasDisplayName, aliasSpanishName, aliasSystemRole);
+    setAliasMessage(`Alias saved for ${selectedAliasTarget}.`);
+  };
+
+  const handleRemoveAlias = () => {
+    removeCustomAlias(selectedAliasTarget);
+    setAliasMessage(`Custom alias removed for ${selectedAliasTarget}.`);
+  };
+
+  const handleClearAliases = () => {
+    clearCustomAliases();
+    setAliasMessage("All custom aliases cleared.");
+  };
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -219,7 +241,7 @@ export default function App() {
           </div>
 
           {predictions.map((prediction, index) => {
-            const alias = getObjectAlias(prediction.className);
+            const alias = getObjectAlias(prediction.className, customAliases);
             return (
               <div
                 key={`${prediction.className}-${index}`}
@@ -300,6 +322,27 @@ export default function App() {
               <small>{object.spanishName ?? object.name} · {object.systemRole ?? "observed object"}</small>
             </article>
           ))}
+        </div>
+
+        <div className="alias-card">
+          <div className="memory-heading">
+            <Pencil size={18} />
+            <div>
+              <h3>Custom Alias</h3>
+              <p>Editing: {selectedAliasTarget}</p>
+            </div>
+          </div>
+          <div className="alias-form">
+            <input value={aliasDisplayName} onChange={(event) => setAliasDisplayName(event.target.value)} placeholder="Display name" />
+            <input value={aliasSpanishName} onChange={(event) => setAliasSpanishName(event.target.value)} placeholder="Spanish name" />
+            <input value={aliasSystemRole} onChange={(event) => setAliasSystemRole(event.target.value)} placeholder="System role" />
+          </div>
+          <div className="memory-actions">
+            <button onClick={handleSaveAlias}><Save size={16} /> Save alias</button>
+            <button onClick={handleRemoveAlias}><X size={16} /> Remove</button>
+            <button onClick={handleClearAliases} disabled={Object.keys(customAliases).length === 0}><Trash2 size={16} /> Clear aliases</button>
+          </div>
+          {aliasMessage && <small className="memory-message">{aliasMessage}</small>}
         </div>
 
         {annotations.length > 0 && (
