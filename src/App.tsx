@@ -25,6 +25,7 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [memoryMessage, setMemoryMessage] = useState<string | null>(null);
   const [aliasMessage, setAliasMessage] = useState<string | null>(null);
+  const [selectedAliasTarget, setSelectedAliasTarget] = useState("cell phone");
   const [aliasDisplayName, setAliasDisplayName] = useState("Mi cel nodo");
   const [aliasSpanishName, setAliasSpanishName] = useState("Celular nodo principal");
   const [aliasSystemRole, setAliasSystemRole] = useState("persistent presence control surface");
@@ -59,13 +60,22 @@ export default function App() {
             systemRole: alias.systemRole,
           };
         });
-  const selectedAliasTarget = displayedObjects[0]?.name ?? "cell phone";
+
+  const aliasTargets = Array.from(new Set(["cell phone", ...displayedObjects.map((object) => object.name), ...Object.keys(customAliases)]));
+  const customAliasEntries = Object.entries(customAliases);
   const detectorStateLabel =
     detectorStatus === "loading"
       ? "Loading detector..."
       : detectorStatus === "ready"
       ? "Detecting objects..."
       : "Detector failed to load";
+
+  useEffect(() => {
+    const alias = getObjectAlias(selectedAliasTarget, customAliases);
+    setAliasDisplayName(alias.displayName);
+    setAliasSpanishName(alias.spanishName);
+    setAliasSystemRole(alias.systemRole);
+  }, [selectedAliasTarget, customAliases]);
 
   const requestCameraAccess = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -189,9 +199,9 @@ export default function App() {
     setAliasMessage(`Alias saved for ${selectedAliasTarget}.`);
   };
 
-  const handleRemoveAlias = () => {
-    removeCustomAlias(selectedAliasTarget);
-    setAliasMessage(`Custom alias removed for ${selectedAliasTarget}.`);
+  const handleRemoveAlias = (className = selectedAliasTarget) => {
+    removeCustomAlias(className);
+    setAliasMessage(`Custom alias removed for ${className}.`);
   };
 
   const handleClearAliases = () => {
@@ -329,20 +339,39 @@ export default function App() {
             <Pencil size={18} />
             <div>
               <h3>Custom Alias</h3>
-              <p>Editing: {selectedAliasTarget}</p>
+              <p>{customAliasEntries.length} custom alias{customAliasEntries.length === 1 ? "" : "es"} stored</p>
             </div>
           </div>
           <div className="alias-form">
+            <select value={selectedAliasTarget} onChange={(event) => setSelectedAliasTarget(event.target.value)}>
+              {aliasTargets.map((target) => (
+                <option key={target} value={target}>{target}</option>
+              ))}
+            </select>
             <input value={aliasDisplayName} onChange={(event) => setAliasDisplayName(event.target.value)} placeholder="Display name" />
             <input value={aliasSpanishName} onChange={(event) => setAliasSpanishName(event.target.value)} placeholder="Spanish name" />
             <input value={aliasSystemRole} onChange={(event) => setAliasSystemRole(event.target.value)} placeholder="System role" />
           </div>
           <div className="memory-actions">
             <button onClick={handleSaveAlias}><Save size={16} /> Save alias</button>
-            <button onClick={handleRemoveAlias}><X size={16} /> Remove</button>
-            <button onClick={handleClearAliases} disabled={Object.keys(customAliases).length === 0}><Trash2 size={16} /> Clear aliases</button>
+            <button onClick={() => handleRemoveAlias()}><X size={16} /> Remove</button>
+            <button onClick={handleClearAliases} disabled={customAliasEntries.length === 0}><Trash2 size={16} /> Clear aliases</button>
           </div>
           {aliasMessage && <small className="memory-message">{aliasMessage}</small>}
+          {customAliasEntries.length > 0 && (
+            <div className="alias-list">
+              {customAliasEntries.map(([className, alias]) => (
+                <article className="alias-item" key={className}>
+                  <div>
+                    <span>{className}</span>
+                    <strong>{alias.displayName ?? className} · {alias.spanishName ?? className}</strong>
+                    <small>{alias.systemRole ?? "custom observed object"}</small>
+                  </div>
+                  <button onClick={() => handleRemoveAlias(className)} aria-label={`Remove alias for ${className}`}><X size={14} /></button>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
 
         {annotations.length > 0 && (
