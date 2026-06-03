@@ -20,6 +20,18 @@ function normalizeClassName(className: string) {
   return className.trim().toLowerCase();
 }
 
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function useCustomAliases() {
   const [customAliases, setCustomAliases] = useState<ObjectAliasRegistry>(() => readStoredAliases());
 
@@ -54,10 +66,33 @@ export function useCustomAliases() {
     setCustomAliases({});
   };
 
+  const exportCustomAliases = () => {
+    const stamp = new Date().toISOString().replaceAll(":", "-");
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      aliases: customAliases,
+    };
+    downloadTextFile(`vision-custom-aliases-${stamp}.json`, JSON.stringify(payload, null, 2));
+  };
+
+  const importCustomAliases = async (file: File) => {
+    const text = await file.text();
+    const parsed = JSON.parse(text) as { aliases?: ObjectAliasRegistry } | ObjectAliasRegistry;
+    const aliases = "aliases" in parsed ? parsed.aliases : parsed;
+
+    if (!aliases || typeof aliases !== "object" || Array.isArray(aliases)) {
+      throw new Error("Custom alias import must be a JSON object or include an aliases object.");
+    }
+
+    setCustomAliases(aliases);
+  };
+
   return {
     customAliases,
     setCustomAlias,
     removeCustomAlias,
     clearCustomAliases,
+    exportCustomAliases,
+    importCustomAliases,
   };
 }
