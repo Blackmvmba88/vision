@@ -294,6 +294,40 @@ button:disabled {
   color: #86efac;
 }
 
+.change-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #31513f;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(20, 83, 45, 0.28), rgba(15, 23, 42, 0.92));
+}
+
+.change-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.change-grid div {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.86);
+}
+
+.change-grid span {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.change-grid strong {
+  color: #f8fafc;
+  line-height: 1.35;
+}
+
 .snapshot-list {
   display: grid;
   gap: 8px;
