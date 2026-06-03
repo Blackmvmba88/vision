@@ -20,17 +20,20 @@ export default function App() {
   >([]);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
+  const { status: detectorStatus, predictions, error: detectorError, motionDetected } = useObjectDetector(videoRef);
 
   const displayedObjects =
-    predictions.length > 0
-      ? predictions.map((prediction) => ({ name: prediction.className, score: prediction.score }))
-      : objects;
+    detectorStatus === "loading"
+      ? objects
+      : predictions.map((prediction) => ({ name: prediction.className, score: prediction.score }));
+
   const detectorStateLabel =
     detectorStatus === "loading"
       ? "Loading detector..."
       : detectorStatus === "ready"
-      ? "Detecting objects..."
+      ? motionDetected
+        ? "Movement detected — showing objects."
+        : "No movement detected yet."
       : "Detector failed to load";
 
   const requestCameraAccess = async () => {
@@ -232,6 +235,12 @@ export default function App() {
               <strong>{Math.round(object.score * 100)}%</strong>
             </article>
           ))}
+          {detectorStatus === "ready" && predictions.length === 0 && (
+            <article className="object-card no-motion">
+              <span>No moving objects detected</span>
+              <strong>0</strong>
+            </article>
+          )}
         </div>
 
         {annotations.length > 0 && (
