@@ -30,7 +30,10 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0",
+    "presence:url": "node scripts/presence-url.mjs",
+    "node:start": "npm run dev",
+    "node:preview": "npm run build && npm run preview",
     "test": "vitest",
     "test:run": "vitest run",
     "lint": "eslint ."

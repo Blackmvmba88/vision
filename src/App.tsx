@@ -1,25 +1,42 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw } from "lucide-react";
+import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree, BarChart3, Pencil, X } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
+import { InventoryMode } from "./features/inventory/InventoryMode";
+import { getObjectAlias } from "./features/labels/objectAliases";
+import "./features/labels/aliasEditor.css";
+import { useCustomAliases } from "./features/labels/useCustomAliases";
+import { createObserverEvents } from "./features/memory/createObserverEvents";
+import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
+import { summarizeObserverEvents } from "./features/memory/summarizeObserverEvents";
+import { useSceneMemory } from "./features/memory/useSceneMemory";
+import type { ManualAnnotation } from "./features/memory/types";
 
 const objects = [
   { name: "keyboard", score: 0.98 },
   { name: "mouse", score: 0.96 },
-  { name: "monitor", score: 0.94 },
-  { name: "can", score: 0.89 },
+  { name: "cell phone", score: 0.94 },
+  { name: "bottle", score: 0.89 },
 ];
 
 type CameraStatus = "initializing" | "active" | "denied" | "unsupported" | "error";
 
 export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const aliasImportInputRef = useRef<HTMLInputElement | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>("initializing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [annotations, setAnnotations] = useState<
-    Array<{ id: string; x: number; y: number; width: number; height: number }>
-  >([]);
+  const [memoryMessage, setMemoryMessage] = useState<string | null>(null);
+  const [aliasMessage, setAliasMessage] = useState<string | null>(null);
+  const [selectedAliasTarget, setSelectedAliasTarget] = useState("cell phone");
+  const [aliasDisplayName, setAliasDisplayName] = useState("Mi cel nodo");
+  const [aliasSpanishName, setAliasSpanishName] = useState("Celular nodo principal");
+  const [aliasSystemRole, setAliasSystemRole] = useState("persistent presence control surface");
+  const [lastDiff, setLastDiff] = useState<SceneSnapshotDiff | null>(null);
+  const [annotations, setAnnotations] = useState<ManualAnnotation[]>([]);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+<<<<<<< HEAD
   const { status: detectorStatus, predictions, error: detectorError, motionDetected } = useObjectDetector(videoRef);
 
   const displayedObjects =
@@ -27,6 +44,38 @@ export default function App() {
       ? objects
       : predictions.map((prediction) => ({ name: prediction.className, score: prediction.score }));
 
+=======
+  const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
+  const { customAliases, setCustomAlias, removeCustomAlias, clearCustomAliases, exportCustomAliases, importCustomAliases } = useCustomAliases();
+  const { snapshots, events, createSnapshot, addEvents, clearMemory, exportMemory, importMemory } = useSceneMemory();
+  const observerSummary = summarizeObserverEvents(events);
+
+  const displayedObjects =
+    predictions.length > 0
+      ? predictions.map((prediction) => {
+          const alias = getObjectAlias(prediction.className, customAliases);
+          return {
+            name: alias.canonicalName,
+            score: prediction.score,
+            displayName: alias.displayName,
+            spanishName: alias.spanishName,
+            systemRole: alias.systemRole,
+          };
+        })
+      : objects.map((object) => {
+          const alias = getObjectAlias(object.name, customAliases);
+          return {
+            ...object,
+            name: alias.canonicalName,
+            displayName: alias.displayName,
+            spanishName: alias.spanishName,
+            systemRole: alias.systemRole,
+          };
+        });
+
+  const aliasTargets = Array.from(new Set(["cell phone", ...displayedObjects.map((object) => object.name), ...Object.keys(customAliases)]));
+  const customAliasEntries = Object.entries(customAliases);
+>>>>>>> 759e686e475a11fa506553b3e5ae360587ba0a1e
   const detectorStateLabel =
     detectorStatus === "loading"
       ? "Loading detector..."
@@ -35,6 +84,13 @@ export default function App() {
         ? "Movement detected — showing objects."
         : "No movement detected yet."
       : "Detector failed to load";
+
+  useEffect(() => {
+    const alias = getObjectAlias(selectedAliasTarget, customAliases);
+    setAliasDisplayName(alias.displayName);
+    setAliasSpanishName(alias.spanishName);
+    setAliasSystemRole(alias.systemRole);
+  }, [selectedAliasTarget, customAliases]);
 
   const requestCameraAccess = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -118,6 +174,74 @@ export default function App() {
     setDragRect(null);
   };
 
+  const handleSaveSnapshot = () => {
+    const previousSnapshot = snapshots[0] ?? null;
+    const snapshot = createSnapshot(displayedObjects, annotations);
+    const diff = diffSceneSnapshots(previousSnapshot, snapshot);
+    const nextEvents = createObserverEvents(snapshot, diff);
+    addEvents(nextEvents);
+    setLastDiff(diff);
+    setMemoryMessage(`Saved ${snapshot.objects.length} objects and ${nextEvents.length} event${nextEvents.length === 1 ? "" : "s"}.`);
+  };
+
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await importMemory(file);
+      setLastDiff(null);
+      setMemoryMessage(`Imported observer memory from ${file.name}`);
+    } catch (error) {
+      setMemoryMessage(error instanceof Error ? error.message : "Unable to import observer memory.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleClearMemory = () => {
+    clearMemory();
+    setLastDiff(null);
+    setMemoryMessage("Observer memory cleared.");
+  };
+
+  const handleSaveAlias = () => {
+    setCustomAlias(selectedAliasTarget, aliasDisplayName, aliasSpanishName, aliasSystemRole);
+    setAliasMessage(`Alias saved for ${selectedAliasTarget}.`);
+  };
+
+  const handleRemoveAlias = (className = selectedAliasTarget) => {
+    removeCustomAlias(className);
+    setAliasMessage(`Custom alias removed for ${className}.`);
+  };
+
+  const handleClearAliases = () => {
+    clearCustomAliases();
+    setAliasMessage("All custom aliases cleared.");
+  };
+
+  const handleAliasImportClick = () => {
+    aliasImportInputRef.current?.click();
+  };
+
+  const handleAliasImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await importCustomAliases(file);
+      setAliasMessage(`Imported aliases from ${file.name}.`);
+    } catch (error) {
+      setAliasMessage(error instanceof Error ? error.message : "Unable to import custom aliases.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -127,7 +251,7 @@ export default function App() {
           </div>
           <div>
             <p className="eyebrow">BlackMamba Vision</p>
-            <h1>Observe. Recognize. Remember.</h1>
+            <h1>Observe. Recognize. Remember. Persist.</h1>
           </div>
         </div>
 
@@ -159,20 +283,23 @@ export default function App() {
             {cameraStatus === "active" ? "Live camera" : "Camera preview"}
           </div>
 
-          {predictions.map((prediction, index) => (
-            <div
-              key={`${prediction.className}-${index}`}
-              className="detection-box"
-              style={{
-                left: `${prediction.bbox[0]}px`,
-                top: `${prediction.bbox[1]}px`,
-                width: `${prediction.bbox[2]}px`,
-                height: `${prediction.bbox[3]}px`,
-              }}
-            >
-              <span>{prediction.className} {Math.round(prediction.score * 100)}%</span>
-            </div>
-          ))}
+          {predictions.map((prediction, index) => {
+            const alias = getObjectAlias(prediction.className, customAliases);
+            return (
+              <div
+                key={`${prediction.className}-${index}`}
+                className="detection-box"
+                style={{
+                  left: `${prediction.bbox[0]}px`,
+                  top: `${prediction.bbox[1]}px`,
+                  width: `${prediction.bbox[2]}px`,
+                  height: `${prediction.bbox[3]}px`,
+                }}
+              >
+                <span>{alias.displayName} · {alias.spanishName} {Math.round(prediction.score * 100)}%</span>
+              </div>
+            );
+          })}
 
           {annotations.map((annotation) => (
             <div
@@ -230,9 +357,12 @@ export default function App() {
 
         <div className="object-list">
           {displayedObjects.map((object) => (
-            <article className="object-card" key={`${object.name}-${object.score}`}>
-              <span>{object.name}</span>
-              <strong>{Math.round(object.score * 100)}%</strong>
+            <article className="object-card object-card-column" key={`${object.name}-${object.score}`}>
+              <div className="object-title-row">
+                <span>{object.displayName ?? object.name}</span>
+                <strong>{Math.round(object.score * 100)}%</strong>
+              </div>
+              <small>{object.spanishName ?? object.name} · {object.systemRole ?? "observed object"}</small>
             </article>
           ))}
           {detectorStatus === "ready" && predictions.length === 0 && (
@@ -240,6 +370,51 @@ export default function App() {
               <span>No moving objects detected</span>
               <strong>0</strong>
             </article>
+          )}
+        </div>
+
+        <InventoryMode objects={displayedObjects} />
+
+        <div className="alias-card">
+          <div className="memory-heading">
+            <Pencil size={18} />
+            <div>
+              <h3>Custom Alias</h3>
+              <p>{customAliasEntries.length} custom alias{customAliasEntries.length === 1 ? "" : "es"} stored</p>
+            </div>
+          </div>
+          <div className="alias-form">
+            <select value={selectedAliasTarget} onChange={(event) => setSelectedAliasTarget(event.target.value)}>
+              {aliasTargets.map((target) => (
+                <option key={target} value={target}>{target}</option>
+              ))}
+            </select>
+            <input value={aliasDisplayName} onChange={(event) => setAliasDisplayName(event.target.value)} placeholder="Display name" />
+            <input value={aliasSpanishName} onChange={(event) => setAliasSpanishName(event.target.value)} placeholder="Spanish name" />
+            <input value={aliasSystemRole} onChange={(event) => setAliasSystemRole(event.target.value)} placeholder="System role" />
+          </div>
+          <div className="memory-actions">
+            <button onClick={handleSaveAlias}><Save size={16} /> Save alias</button>
+            <button onClick={() => handleRemoveAlias()}><X size={16} /> Remove</button>
+            <button onClick={exportCustomAliases} disabled={customAliasEntries.length === 0}><Download size={16} /> Export</button>
+            <button onClick={handleAliasImportClick}><Upload size={16} /> Import</button>
+            <button onClick={handleClearAliases} disabled={customAliasEntries.length === 0}><Trash2 size={16} /> Clear aliases</button>
+            <input ref={aliasImportInputRef} type="file" accept="application/json" onChange={handleAliasImportFile} hidden />
+          </div>
+          {aliasMessage && <small className="memory-message">{aliasMessage}</small>}
+          {customAliasEntries.length > 0 && (
+            <div className="alias-list">
+              {customAliasEntries.map(([className, alias]) => (
+                <article className="alias-item" key={className}>
+                  <div>
+                    <span>{className}</span>
+                    <strong>{alias.displayName ?? className} · {alias.spanishName ?? className}</strong>
+                    <small>{alias.systemRole ?? "custom observed object"}</small>
+                  </div>
+                  <button onClick={() => handleRemoveAlias(className)} aria-label={`Remove alias for ${className}`}><X size={14} /></button>
+                </article>
+              ))}
+            </div>
           )}
         </div>
 
@@ -258,11 +433,94 @@ export default function App() {
           </div>
         )}
 
-        <div className="memory-card">
-          <History size={20} />
-          <div>
-            <h3>Observer Memory</h3>
-            <p>Inventory tracking comes next: detect changes, count objects, remember scenes.</p>
+        <div className="memory-card memory-card-column">
+          <div className="memory-heading">
+            <History size={20} />
+            <div>
+              <h3>Observer Memory</h3>
+              <p>{snapshots.length} snapshot{snapshots.length === 1 ? "" : "s"} · {events.length} event{events.length === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+
+          <div className="memory-actions">
+            <button onClick={handleSaveSnapshot}><Save size={16} /> Save scene</button>
+            <button onClick={exportMemory} disabled={snapshots.length === 0 && events.length === 0}><Download size={16} /> Export</button>
+            <button onClick={handleImportClick}><Upload size={16} /> Import</button>
+            <button onClick={handleClearMemory} disabled={snapshots.length === 0 && events.length === 0}><Trash2 size={16} /> Clear</button>
+            <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} hidden />
+          </div>
+
+          {memoryMessage && <small className="memory-message">{memoryMessage}</small>}
+
+          <div className={`stats-card stats-${observerSummary.stabilityLabel}`}>
+            <div className="memory-heading">
+              <BarChart3 size={18} />
+              <div>
+                <h3>Observer Stats</h3>
+                <p>Status: {observerSummary.stabilityLabel}</p>
+              </div>
+            </div>
+            <div className="stats-grid">
+              <div><span>Events</span><strong>{observerSummary.totalEvents}</strong></div>
+              <div><span>Appeared</span><strong>{observerSummary.appearedCount}</strong></div>
+              <div><span>Gone</span><strong>{observerSummary.disappearedCount}</strong></div>
+              <div><span>Snapshots</span><strong>{observerSummary.snapshotCount}</strong></div>
+            </div>
+            {observerSummary.lastEventMessage && <small className="stats-last">Last: {observerSummary.lastEventMessage}</small>}
+          </div>
+
+          {lastDiff && (
+            <div className="change-card">
+              <div className="memory-heading">
+                <Activity size={18} />
+                <div>
+                  <h3>Change Detection</h3>
+                  <p>{lastDiff.previousCount} objects before → {lastDiff.currentCount} objects now</p>
+                </div>
+              </div>
+              <div className="change-grid">
+                <div>
+                  <span>Appeared</span>
+                  <strong>{lastDiff.appeared.length > 0 ? lastDiff.appeared.join(", ") : "none"}</strong>
+                </div>
+                <div>
+                  <span>Disappeared</span>
+                  <strong>{lastDiff.disappeared.length > 0 ? lastDiff.disappeared.join(", ") : "none"}</strong>
+                </div>
+                <div>
+                  <span>Unchanged</span>
+                  <strong>{lastDiff.unchanged.length > 0 ? lastDiff.unchanged.join(", ") : "none"}</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="event-log-card">
+            <div className="memory-heading">
+              <ListTree size={18} />
+              <div>
+                <h3>Event Log</h3>
+                <p>Latest observer events</p>
+              </div>
+            </div>
+            <div className="event-list">
+              {events.slice(0, 8).map((event) => (
+                <article className={`event-item event-${event.type}`} key={event.id}>
+                  <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                  <strong>{event.message}</strong>
+                </article>
+              ))}
+              {events.length === 0 && <small className="empty-state">No events yet. Save a scene to create the first observer event.</small>}
+            </div>
+          </div>
+
+          <div className="snapshot-list">
+            {snapshots.slice(0, 5).map((snapshot) => (
+              <article className="snapshot-card" key={snapshot.id}>
+                <span>{new Date(snapshot.timestamp).toLocaleString()}</span>
+                <strong>{snapshot.objects.length} objects · {snapshot.annotations.length} marks</strong>
+              </article>
+            ))}
           </div>
         </div>
       </aside>
