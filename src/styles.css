@@ -16,6 +16,11 @@ select {
   font: inherit;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -242,9 +247,92 @@ select {
   gap: 12px;
 }
 
+.memory-card-column {
+  flex-direction: column;
+}
+
+.memory-heading {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.memory-heading h3 {
+  margin: 0;
+}
+
+.memory-heading p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+}
+
+.memory-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.memory-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.memory-actions button:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.memory-message {
+  display: block;
+  color: #86efac;
+}
+
+.snapshot-list {
+  display: grid;
+  gap: 8px;
+}
+
+.snapshot-card {
+  background: #0f172a;
+  border: 1px solid #26364f;
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.snapshot-card span {
+  color: #cbd5e1;
+  font-size: 0.86rem;
+}
+
+.snapshot-card strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
 .error-label {
   display: block;
   margin-top: 6px;
   color: #fca5a5;
   font-size: 0.88rem;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .camera-frame {
+    height: 65vh;
+    min-height: 420px;
+  }
 }
