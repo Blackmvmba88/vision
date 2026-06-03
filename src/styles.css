@@ -264,6 +264,40 @@ button:disabled {
   line-height: 1.35;
 }
 
+.alias-card,
+.change-card,
+.event-log-card,
+.stats-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.alias-card {
+  margin-top: 14px;
+  border: 1px solid #4c3f74;
+  background: linear-gradient(180deg, rgba(76, 29, 149, 0.28), rgba(15, 23, 42, 0.94));
+}
+
+.alias-form {
+  display: grid;
+  gap: 8px;
+}
+
+.alias-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.alias-form input::placeholder {
+  color: #64748b;
+}
+
 .memory-heading {
   display: flex;
   gap: 12px;
@@ -305,15 +339,6 @@ button:disabled {
 .memory-message {
   display: block;
   color: #86efac;
-}
-
-.change-card,
-.event-log-card,
-.stats-card {
-  display: grid;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 14px;
 }
 
 .change-card {
