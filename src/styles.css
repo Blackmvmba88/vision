@@ -294,13 +294,22 @@ button:disabled {
   color: #86efac;
 }
 
-.change-card {
+.change-card,
+.event-log-card {
   display: grid;
   gap: 12px;
   padding: 12px;
-  border: 1px solid #31513f;
   border-radius: 14px;
+}
+
+.change-card {
+  border: 1px solid #31513f;
   background: linear-gradient(180deg, rgba(20, 83, 45, 0.28), rgba(15, 23, 42, 0.92));
+}
+
+.event-log-card {
+  border: 1px solid #334155;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.92));
 }
 
 .change-grid {
@@ -328,11 +337,13 @@ button:disabled {
   line-height: 1.35;
 }
 
+.event-list,
 .snapshot-list {
   display: grid;
   gap: 8px;
 }
 
+.event-item,
 .snapshot-card {
   background: #0f172a;
   border: 1px solid #26364f;
@@ -342,14 +353,42 @@ button:disabled {
   gap: 6px;
 }
 
+.event-item {
+  border-left-width: 4px;
+}
+
+.event-appeared {
+  border-left-color: #86efac;
+}
+
+.event-disappeared {
+  border-left-color: #fca5a5;
+}
+
+.event-unchanged {
+  border-left-color: #93c5fd;
+}
+
+.event-snapshot {
+  border-left-color: #c4b5fd;
+}
+
+.event-item span,
 .snapshot-card span {
   color: #cbd5e1;
   font-size: 0.86rem;
 }
 
+.event-item strong,
 .snapshot-card strong {
   color: #f8fafc;
   font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.empty-state {
+  color: #94a3b8;
+  line-height: 1.4;
 }
 
 .error-label {
