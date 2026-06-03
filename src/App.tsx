@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity } from "lucide-react";
+import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
+import { createObserverEvents } from "./features/memory/createObserverEvents";
 import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
 import { useSceneMemory } from "./features/memory/useSceneMemory";
 import type { ManualAnnotation } from "./features/memory/types";
@@ -25,7 +26,7 @@ export default function App() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
-  const { snapshots, createSnapshot, clearSnapshots, exportSnapshots, importSnapshots } = useSceneMemory();
+  const { snapshots, events, createSnapshot, addEvents, clearMemory, exportMemory, importMemory } = useSceneMemory();
 
   const displayedObjects =
     predictions.length > 0
@@ -124,8 +125,10 @@ export default function App() {
     const previousSnapshot = snapshots[0] ?? null;
     const snapshot = createSnapshot(displayedObjects, annotations);
     const diff = diffSceneSnapshots(previousSnapshot, snapshot);
+    const nextEvents = createObserverEvents(snapshot, diff);
+    addEvents(nextEvents);
     setLastDiff(diff);
-    setMemoryMessage(`Saved ${snapshot.objects.length} objects at ${new Date(snapshot.timestamp).toLocaleTimeString()}`);
+    setMemoryMessage(`Saved ${snapshot.objects.length} objects and ${nextEvents.length} event${nextEvents.length === 1 ? "" : "s"}.`);
   };
 
   const handleImportClick = () => {
@@ -137,18 +140,18 @@ export default function App() {
     if (!file) return;
 
     try {
-      await importSnapshots(file);
+      await importMemory(file);
       setLastDiff(null);
-      setMemoryMessage(`Imported memory from ${file.name}`);
+      setMemoryMessage(`Imported observer memory from ${file.name}`);
     } catch (error) {
-      setMemoryMessage(error instanceof Error ? error.message : "Unable to import scene memory.");
+      setMemoryMessage(error instanceof Error ? error.message : "Unable to import observer memory.");
     } finally {
       event.target.value = "";
     }
   };
 
-  const handleClearSnapshots = () => {
-    clearSnapshots();
+  const handleClearMemory = () => {
+    clearMemory();
     setLastDiff(null);
     setMemoryMessage("Observer memory cleared.");
   };
@@ -292,15 +295,15 @@ export default function App() {
             <History size={20} />
             <div>
               <h3>Observer Memory</h3>
-              <p>{snapshots.length} snapshot{snapshots.length === 1 ? "" : "s"} stored in this browser.</p>
+              <p>{snapshots.length} snapshot{snapshots.length === 1 ? "" : "s"} · {events.length} event{events.length === 1 ? "" : "s"}</p>
             </div>
           </div>
 
           <div className="memory-actions">
             <button onClick={handleSaveSnapshot}><Save size={16} /> Save scene</button>
-            <button onClick={exportSnapshots} disabled={snapshots.length === 0}><Download size={16} /> Export</button>
+            <button onClick={exportMemory} disabled={snapshots.length === 0 && events.length === 0}><Download size={16} /> Export</button>
             <button onClick={handleImportClick}><Upload size={16} /> Import</button>
-            <button onClick={handleClearSnapshots} disabled={snapshots.length === 0}><Trash2 size={16} /> Clear</button>
+            <button onClick={handleClearMemory} disabled={snapshots.length === 0 && events.length === 0}><Trash2 size={16} /> Clear</button>
             <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} hidden />
           </div>
 
@@ -331,6 +334,25 @@ export default function App() {
               </div>
             </div>
           )}
+
+          <div className="event-log-card">
+            <div className="memory-heading">
+              <ListTree size={18} />
+              <div>
+                <h3>Event Log</h3>
+                <p>Latest observer events</p>
+              </div>
+            </div>
+            <div className="event-list">
+              {events.slice(0, 8).map((event) => (
+                <article className={`event-item event-${event.type}`} key={event.id}>
+                  <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                  <strong>{event.message}</strong>
+                </article>
+              ))}
+              {events.length === 0 && <small className="empty-state">No events yet. Save a scene to create the first observer event.</small>}
+            </div>
+          </div>
 
           <div className="snapshot-list">
             {snapshots.slice(0, 5).map((snapshot) => (
