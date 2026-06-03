@@ -18,3 +18,14 @@ export type SceneSnapshot = {
   annotations: ManualAnnotation[];
   source: "browser";
 };
+
+export type ObserverEventType = "appeared" | "disappeared" | "unchanged" | "snapshot";
+
+export type ObserverEvent = {
+  id: string;
+  timestamp: string;
+  type: ObserverEventType;
+  label: string;
+  message: string;
+  snapshotId: string;
+};
