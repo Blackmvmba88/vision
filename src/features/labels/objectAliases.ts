@@ -5,6 +5,8 @@ export type ObjectAlias = {
   systemRole: string;
 };
 
+export type ObjectAliasRegistry = Record<string, Partial<ObjectAlias>>;
+
 const aliases: Record<string, ObjectAlias> = {
   "cell phone": {
     canonicalName: "cell phone",
@@ -50,20 +52,37 @@ const aliases: Record<string, ObjectAlias> = {
   },
 };
 
-export function getObjectAlias(className: string): ObjectAlias {
-  const normalizedName = className.trim().toLowerCase();
-
-  return (
-    aliases[normalizedName] ?? {
-      canonicalName: normalizedName,
-      displayName: className,
-      spanishName: className,
-      systemRole: "observed object",
-    }
-  );
+function normalizeClassName(className: string) {
+  return className.trim().toLowerCase();
 }
 
-export function formatObjectLabel(className: string) {
-  const alias = getObjectAlias(className);
+function fallbackAlias(className: string): ObjectAlias {
+  const normalizedName = normalizeClassName(className);
+
+  return {
+    canonicalName: normalizedName,
+    displayName: className,
+    spanishName: className,
+    systemRole: "observed object",
+  };
+}
+
+export function getObjectAlias(className: string, customAliases: ObjectAliasRegistry = {}): ObjectAlias {
+  const normalizedName = normalizeClassName(className);
+  const baseAlias = aliases[normalizedName] ?? fallbackAlias(className);
+  const customAlias = customAliases[normalizedName];
+
+  if (!customAlias) return baseAlias;
+
+  return {
+    canonicalName: customAlias.canonicalName ?? baseAlias.canonicalName,
+    displayName: customAlias.displayName ?? baseAlias.displayName,
+    spanishName: customAlias.spanishName ?? baseAlias.spanishName,
+    systemRole: customAlias.systemRole ?? baseAlias.systemRole,
+  };
+}
+
+export function formatObjectLabel(className: string, customAliases: ObjectAliasRegistry = {}) {
+  const alias = getObjectAlias(className, customAliases);
   return `${alias.displayName} · ${alias.spanishName}`;
 }
