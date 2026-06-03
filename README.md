@@ -54,19 +54,22 @@ Implemented:
 
 - React + Vite + TypeScript app shell
 - Dark cinematic UI
-- Mock camera frame
-- Mock object detections
+- Real camera preview with permission handling
+- TensorFlow.js / COCO-SSD object detector
+- Bounding boxes on live video
 - Object confidence panel
-- Observer Memory placeholder
+- Custom alias editor with import/export
+- Observer Memory snapshots and event log
+- Change detection for appeared/disappeared objects
+- Inventory Mode with grouped counts, zone/session naming, JSON export, and CSV export
 
 Next:
 
-- Real camera preview
-- TensorFlow.js / COCO-SSD detector
-- Bounding boxes on live video
-- Object counter
-- Local scene memory
-- Persistent local node mode
+- Mobile PWA install flow
+- Dataset capture mode
+- Maker Bench presets
+- Persistent local node API
+- Offline restore and backup mode
 
 ---
 
@@ -138,7 +141,14 @@ Suggested projects:
 
 ### 4. Inventory Memory
 
-Count objects and compare changes over time.
+Count objects, group repeated detections, label the current zone/session, and export a usable inventory payload.
+
+Current exports:
+
+```txt
+JSON -> full session payload for memory/API usage
+CSV  -> spreadsheet-friendly object count report
+```
 
 Use cases:
 
@@ -182,8 +192,9 @@ Phone / browser / tablet
 - React
 - Vite
 - TypeScript
-- TensorFlow.js planned
-- COCO-SSD planned
+- TensorFlow.js
+- COCO-SSD
+- Lucide React
 - YOLO / custom models planned
 - PWA / mobile build planned
 - API backend planned
@@ -218,37 +229,37 @@ Then open the Mac or server LAN address from the phone browser.
 
 - [x] Create React/Vite project structure
 - [x] Add prototype UI
-- [ ] Add real camera preview
-- [ ] Add camera permission handling
-- [ ] Add responsive mobile layout
+- [x] Add real camera preview
+- [x] Add camera permission handling
+- [x] Add responsive mobile layout
 
 ### Alpha 0.2
 
-- [ ] Add TensorFlow.js
-- [ ] Add COCO-SSD model
-- [ ] Run live object detection
-- [ ] Draw bounding boxes on video
-- [ ] Show confidence scores
+- [x] Add TensorFlow.js
+- [x] Add COCO-SSD model
+- [x] Run live object detection
+- [x] Draw bounding boxes on video
+- [x] Show confidence scores
 
 ### Alpha 0.3
 
-- [ ] Count detected objects
-- [ ] Group repeated objects
-- [ ] Store scene snapshots locally
-- [ ] Compare current scene vs previous scene
-- [ ] Report added/removed objects
+- [x] Count detected objects
+- [x] Group repeated objects
+- [x] Store scene snapshots locally
+- [x] Compare current scene vs previous scene
+- [x] Report added/removed objects
 
 ### Alpha 0.4
 
-- [ ] Add custom object labels
+- [x] Add custom object labels
 - [ ] Add dataset capture mode
 - [ ] Export training images
 - [ ] Prepare YOLO dataset structure
 
 ### Alpha 0.5 — Persistent Presence
 
-- [ ] Add persistent memory model
-- [ ] Add local JSON export/import
+- [x] Add persistent memory model
+- [x] Add local JSON export/import
 - [ ] Add API backend scaffold
 - [ ] Add `/health` endpoint
 - [ ] Add event log schema
@@ -259,9 +270,9 @@ Then open the Mac or server LAN address from the phone browser.
 
 - [ ] Offline-capable PWA
 - [ ] Mobile camera mode
-- [ ] Inventory history
+- [x] Inventory history foundation
 - [ ] Maker Bench Mode
-- [ ] Export reports
+- [x] Export reports
 - [ ] Local persistent node mode
 
 ---
