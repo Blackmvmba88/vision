@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree, BarChart3, Pencil, X } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
 import { getObjectAlias } from "./features/labels/objectAliases";
+import "./features/labels/aliasEditor.css";
 import { useCustomAliases } from "./features/labels/useCustomAliases";
 import { createObserverEvents } from "./features/memory/createObserverEvents";
 import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
