@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree } from "lucide-react";
+import { Camera, Eye, Boxes, History, ScanLine, AlertTriangle, RotateCcw, Save, Download, Upload, Trash2, Activity, ListTree, BarChart3 } from "lucide-react";
 import { useObjectDetector } from "./features/detector/useObjectDetector";
 import { createObserverEvents } from "./features/memory/createObserverEvents";
 import { diffSceneSnapshots, type SceneSnapshotDiff } from "./features/memory/diffSceneSnapshots";
+import { summarizeObserverEvents } from "./features/memory/summarizeObserverEvents";
 import { useSceneMemory } from "./features/memory/useSceneMemory";
 import type { ManualAnnotation } from "./features/memory/types";
 
@@ -27,6 +28,7 @@ export default function App() {
   const [dragRect, setDragRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { status: detectorStatus, predictions, error: detectorError } = useObjectDetector(videoRef);
   const { snapshots, events, createSnapshot, addEvents, clearMemory, exportMemory, importMemory } = useSceneMemory();
+  const observerSummary = summarizeObserverEvents(events);
 
   const displayedObjects =
     predictions.length > 0
@@ -308,6 +310,23 @@ export default function App() {
           </div>
 
           {memoryMessage && <small className="memory-message">{memoryMessage}</small>}
+
+          <div className={`stats-card stats-${observerSummary.stabilityLabel}`}>
+            <div className="memory-heading">
+              <BarChart3 size={18} />
+              <div>
+                <h3>Observer Stats</h3>
+                <p>Status: {observerSummary.stabilityLabel}</p>
+              </div>
+            </div>
+            <div className="stats-grid">
+              <div><span>Events</span><strong>{observerSummary.totalEvents}</strong></div>
+              <div><span>Appeared</span><strong>{observerSummary.appearedCount}</strong></div>
+              <div><span>Gone</span><strong>{observerSummary.disappearedCount}</strong></div>
+              <div><span>Snapshots</span><strong>{observerSummary.snapshotCount}</strong></div>
+            </div>
+            {observerSummary.lastEventMessage && <small className="stats-last">Last: {observerSummary.lastEventMessage}</small>}
+          </div>
 
           {lastDiff && (
             <div className="change-card">
