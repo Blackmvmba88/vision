@@ -1,0 +1,20 @@
+{
+  "name": "@blackmamba/vision-presence-node",
+  "version": "0.1.0-alpha.0",
+  "description": "Local Persistent Presence API node for Vision snapshots, object events, and observer memory.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.mjs",
+    "start": "node src/index.mjs",
+    "health": "node -e \"fetch('http://localhost:8787/health').then(r=>r.json()).then(console.log)\""
+  },
+  "keywords": [
+    "vision",
+    "persistent-presence",
+    "observer-first",
+    "object-detection",
+    "inventory-memory"
+  ],
+  "license": "MIT"
+}
