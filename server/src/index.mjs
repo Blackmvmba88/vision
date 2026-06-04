@@ -6,6 +6,15 @@ import { createMemoryStorage } from "./storage/memory.mjs";
 const PORT = Number.parseInt(process.env.PORT ?? "8787", 10);
 const NODE_NAME = process.env.VISION_NODE_NAME ?? "vision-local-node";
 
+// Security: bind address defaults to loopback; explicit opt-in for LAN/public
+const BIND_ADDR = process.env.VISION_BIND_ADDRESS ?? "127.0.0.1";
+
+// Security: CORS origin defaults to frontend dev server; explicit opt-in for "*"
+const CORS_ORIGIN = process.env.VISION_CORS_ORIGIN ?? "http://localhost:5173";
+
+// Security: optional bearer token for read/write (if env var set, enforced on all endpoints except /health)
+const AUTH_TOKEN = process.env.VISION_AUTH_TOKEN ?? null;
+
 const storage = createMemoryStorage();
 
 function now() {
@@ -17,12 +26,19 @@ function sendJson(res, statusCode, payload) {
 
   res.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
-    "access-control-allow-origin": "*",
+    "access-control-allow-origin": CORS_ORIGIN,
     "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type",
+    "access-control-allow-headers": "content-type,authorization",
   });
 
   res.end(body);
+}
+
+// Security: token validation middleware
+function validateToken(req) {
+  if (!AUTH_TOKEN) return true; // No token configured, allow all
+  const header = req.headers.authorization ?? "";
+  return header.startsWith("Bearer ") && header.slice(7) === AUTH_TOKEN;
 }
 
 async function readJson(req) {
@@ -74,6 +90,7 @@ async function route(req, res) {
     return sendJson(res, 204, {});
   }
 
+  // /health is public; all other endpoints require valid token (if configured)
   if (req.method === "GET" && url.pathname === "/health") {
     return sendJson(res, 200, {
       ok: true,
@@ -82,6 +99,15 @@ async function route(req, res) {
       storage: "memory",
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: now(),
+    });
+  }
+
+  // Require token for all other endpoints (if AUTH_TOKEN is set)
+  if (AUTH_TOKEN && !validateToken(req)) {
+    return sendJson(res, 401, {
+      ok: false,
+      error: "unauthorized",
+      message: "Missing or invalid Authorization: Bearer <token>",
     });
   }
 
@@ -171,6 +197,10 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Vision Persistent Presence Node listening on http://0.0.0.0:${PORT}`);
+server.listen(PORT, BIND_ADDR, () => {
+  const corsStatus = CORS_ORIGIN === "*" ? "PERMISSIVE" : `limited to ${CORS_ORIGIN}`;
+  const authStatus = AUTH_TOKEN ? "enabled" : "disabled";
+  console.log(`Vision Persistent Presence Node listening on http://${BIND_ADDR}:${PORT}`);
+  console.log(`  CORS: ${corsStatus}`);
+  console.log(`  Auth: ${authStatus}`);
 });
