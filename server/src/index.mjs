@@ -1,13 +1,12 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
+import { createInventoryPayload } from "./domain/inventory.mjs";
+import { createMemoryStorage } from "./storage/memory.mjs";
 
 const PORT = Number.parseInt(process.env.PORT ?? "8787", 10);
 const NODE_NAME = process.env.VISION_NODE_NAME ?? "vision-local-node";
 
-const memory = {
-  snapshots: [],
-  events: [],
-};
+const storage = createMemoryStorage();
 
 function now() {
   return new Date().toISOString();
@@ -80,24 +79,27 @@ async function route(req, res) {
       ok: true,
       service: "vision-persistent-presence-node",
       node: NODE_NAME,
+      storage: "memory",
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: now(),
     });
   }
 
   if (req.method === "GET" && url.pathname === "/snapshots") {
+    const snapshots = await storage.listSnapshots();
+
     return sendJson(res, 200, {
-      count: memory.snapshots.length,
-      snapshots: memory.snapshots,
+      count: snapshots.length,
+      snapshots,
     });
   }
 
   if (req.method === "POST" && url.pathname === "/snapshots") {
     const payload = await readJson(req);
     const snapshot = normalizeSnapshot(payload);
-    memory.snapshots.push(snapshot);
+    await storage.createSnapshot(snapshot);
 
-    memory.events.push(normalizeEvent({
+    await storage.createEvent(normalizeEvent({
       type: "snapshot_created",
       label: "scene",
       zone: snapshot.zone,
@@ -110,18 +112,38 @@ async function route(req, res) {
   }
 
   if (req.method === "GET" && url.pathname === "/events") {
+    const events = await storage.listEvents();
+
     return sendJson(res, 200, {
-      count: memory.events.length,
-      events: memory.events,
+      count: events.length,
+      events,
     });
   }
 
   if (req.method === "POST" && url.pathname === "/events") {
     const payload = await readJson(req);
     const event = normalizeEvent(payload);
-    memory.events.push(event);
+    await storage.createEvent(event);
 
     return sendJson(res, 201, event);
+  }
+
+  if (req.method === "GET" && url.pathname === "/inventory") {
+    const zone = url.searchParams.get("zone") ?? undefined;
+    const snapshot = await storage.getLatestSnapshot({ zone });
+
+    if (!snapshot) {
+      return sendJson(res, 200, {
+        zone: zone ?? "default",
+        session: null,
+        snapshotId: null,
+        createdAt: null,
+        count: 0,
+        objects: [],
+      });
+    }
+
+    return sendJson(res, 200, createInventoryPayload(snapshot));
   }
 
   return sendJson(res, 404, {
@@ -133,6 +155,8 @@ async function route(req, res) {
       "POST /snapshots",
       "GET /events",
       "POST /events",
+      "GET /inventory",
+      "GET /inventory?zone=desk",
     ],
   });
 }
