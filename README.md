@@ -43,6 +43,8 @@ Vision = always recoverable
 Read the full architecture here:
 
 - [Persistent Presence Architecture](docs/PERSISTENT_PRESENCE.md)
+- [Persistent Presence Node Runbook](docs/PRESENCE_NODE.md)
+- [Vision Demo Script](docs/DEMO_SCRIPT.md)
 
 ---
 
@@ -62,13 +64,16 @@ Implemented:
 - Observer Memory snapshots and event log
 - Change detection for appeared/disappeared objects
 - Inventory Mode with grouped counts, zone/session naming, JSON export, and CSV export
+- Persistent Presence Node API scaffold
+- `/health`, `/events`, and `/snapshots` endpoints
+- Initial SQLite-compatible event log schema
 
 Next:
 
 - Mobile PWA install flow
 - Dataset capture mode
 - Maker Bench presets
-- Persistent local node API
+- SQLite persistence implementation
 - Offline restore and backup mode
 
 ---
@@ -185,6 +190,24 @@ Phone / browser / tablet
 └── temporary control surface
 ```
 
+Current API scaffold:
+
+```txt
+GET  /health
+GET  /events
+POST /events
+GET  /snapshots
+POST /snapshots
+```
+
+Run it:
+
+```bash
+cd server
+npm install
+npm run dev
+```
+
 ---
 
 ## Tech Stack
@@ -195,9 +218,10 @@ Phone / browser / tablet
 - TensorFlow.js
 - COCO-SSD
 - Lucide React
+- Node.js HTTP API scaffold
+- SQLite schema draft
 - YOLO / custom models planned
 - PWA / mobile build planned
-- API backend planned
 - SQLite / PostgreSQL memory planned
 
 ---
@@ -220,6 +244,20 @@ npm run dev -- --host 0.0.0.0
 ```
 
 Then open the Mac or server LAN address from the phone browser.
+
+For the optional local presence node:
+
+```bash
+cd server
+npm install
+npm run dev
+```
+
+Health check:
+
+```bash
+curl http://localhost:8787/health
+```
 
 ---
 
@@ -260,10 +298,11 @@ Then open the Mac or server LAN address from the phone browser.
 
 - [x] Add persistent memory model
 - [x] Add local JSON export/import
-- [ ] Add API backend scaffold
-- [ ] Add `/health` endpoint
-- [ ] Add event log schema
-- [ ] Add local node startup script
+- [x] Add API backend scaffold
+- [x] Add `/health` endpoint
+- [x] Add event log schema
+- [x] Add local node startup script
+- [ ] Add SQLite-backed persistence
 - [ ] Add backup notes
 
 ### Beta 1.0
